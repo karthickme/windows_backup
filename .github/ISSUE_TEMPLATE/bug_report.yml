@@ -1,0 +1,65 @@
+name: Bug report
+description: Something went wrong with Folder Backup on Windows
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe what failed. **Do not paste** cloud keys, connection strings, service-account JSON, or Credential Manager secrets. Redact bucket names if they are sensitive.
+  - type: input
+    id: windows_version
+    attributes:
+      label: Windows version
+      description: Settings → System → About, or `winver`.
+      placeholder: "Windows 11 24H2"
+    validations:
+      required: true
+  - type: input
+    id: python_version
+    attributes:
+      label: Python version
+      description: Output of `python --version` (or note if you ran the packaged exe).
+      placeholder: "Python 3.12.x / FolderBackup.exe"
+    validations:
+      required: true
+  - type: dropdown
+    id: cloud_provider
+    attributes:
+      label: Cloud provider
+      options:
+        - Amazon S3 / S3-compatible
+        - Google Cloud Storage
+        - Azure Blob Storage
+        - Not applicable / unknown
+    validations:
+      required: true
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened
+      description: Expected vs actual behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Folder Backup
+        2. …
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (no secrets)
+      description: |
+        Activity tab output, or a snippet from `%LOCALAPPDATA%\FolderBackup\logs\run-YYYYMMDD.log`.
+        Strip credentials, tokens, and connection strings before pasting.
+      render: text
+  - type: textarea
+    id: extra
+    attributes:
+      label: Extra context
+      description: Config shape (no secrets), whether you used the UI or `--run-once`, Task Scheduler, etc.

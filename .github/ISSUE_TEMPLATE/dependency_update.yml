@@ -1,0 +1,65 @@
+name: Dependency update
+description: Track a Dependabot or manual package/action upgrade
+title: "[deps] "
+labels: ["dependencies"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for **major** bumps, grouped SDK updates, or any upgrade that needs a human checklist.
+        Link the Dependabot PR if one exists.
+  - type: input
+    id: package
+    attributes:
+      label: Package or action
+      placeholder: boto3 / actions/checkout
+    validations:
+      required: true
+  - type: input
+    id: current_version
+    attributes:
+      label: Current version
+    validations:
+      required: true
+  - type: input
+    id: new_version
+    attributes:
+      label: New version
+    validations:
+      required: true
+  - type: dropdown
+    id: ecosystem
+    attributes:
+      label: Ecosystem
+      options:
+        - pip (pyproject.toml)
+        - GitHub Actions
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk
+      options:
+        - Low (patch / transitive)
+        - Medium (minor API or SDK client)
+        - High (major / breaking)
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Why this upgrade
+      description: Security advisory, Dependabot PR, required API change, etc.
+  - type: checkboxes
+    id: testing
+    attributes:
+      label: Testing checklist
+      options:
+        - label: `python -m pytest` passes
+        - label: Dry-run (`python -m folderbackup --dry-run`) looks sane
+        - label: Destination **Test connection** succeeds for the affected provider (S3 / GCS / Azure)
+        - label: UI smoke (Sources, Destination, Schedule, Activity, tray quit)
+        - label: CI / packaging still green (GitVersion + PyInstaller job if present)
+        - label: No secrets committed (lockfiles, logs, `.env`)

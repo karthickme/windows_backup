@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Dependabot documentation
+    url: https://docs.github.com/en/code-security/dependabot
+    about: How weekly pip and GitHub Actions update PRs work.
+  - name: Do not paste secrets
+    url: https://docs.github.com/en/code-security/getting-started/best-practices-for-preventing-data-leaks-in-your-organization
+    about: Keep access keys, connection strings, and service-account JSON out of issues and logs.
