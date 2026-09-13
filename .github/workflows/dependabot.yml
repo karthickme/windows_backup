@@ -1,0 +1,65 @@
+# Labels, comments, and optional squash auto-merge for Dependabot PRs.
+# Does not checkout or execute PR code. Does not auto-merge major bumps.
+name: Dependabot
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  dependabot:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create dependencies --force --color 0366d6 --description "Dependency updates" --repo "$GITHUB_REPOSITORY"
+          gh label create python --force --color 3776ab --description "Python / pip" --repo "$GITHUB_REPOSITORY"
+          gh label create github-actions --force --color 2088FF --description "GitHub Actions" --repo "$GITHUB_REPOSITORY"
+
+      - name: Label pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          ECOSYSTEM: ${{ steps.metadata.outputs.package-ecosystem }}
+        run: |
+          gh pr edit "$PR_URL" --add-label "dependencies"
+          case "$ECOSYSTEM" in
+            pip|python) gh pr edit "$PR_URL" --add-label "python" ;;
+            github_actions|github-actions|actions) gh pr edit "$PR_URL" --add-label "github-actions" ;;
+          esac
+
+      - name: Enable auto-merge for patch and minor
+        if: github.base_ref == 'testing' && contains(fromJSON('["version-update:semver-patch","version-update:semver-minor"]'), steps.metadata.outputs.update-type)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          if ! gh pr merge --auto --squash "$PR_URL"; then
+            echo "Auto-merge skipped (repo setting or token). PR left open."
+          fi
+
+      - name: Comment on possible breaking (major) bump
+        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          ISSUE_URL: https://github.com/${{ github.repository }}/issues/new?template=dependency_update.yml
+        run: |
+          gh pr comment "$PR_URL" --body "This looks like a **major** version bump and will **not** be auto-merged.
+
+          Track testing and rollout with the [dependency update issue template](${ISSUE_URL}).
+
+          Suggested checks: unit tests, backup dry-run, Destination connection test, UI smoke, and CI/packaging."

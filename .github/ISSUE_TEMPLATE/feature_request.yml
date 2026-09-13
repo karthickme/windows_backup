@@ -1,0 +1,40 @@
+name: Feature request
+description: Suggest an enhancement for Folder Backup
+title: "[feat] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is hard or missing today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should the app or tooling do instead?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Sources / filters
+        - Destination / cloud
+        - Schedule / Task Scheduler
+        - Activity / logging
+        - Packaging / CI
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: markdown
+    attributes:
+      value: |
+        v1 is intentionally one-way backup (local deletes are not mirrored in the cloud). Restore UI, encryption, and multi-machine catalog sharing are listed as out of scope in the README unless that changes.
