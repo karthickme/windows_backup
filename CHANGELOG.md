@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- App startup no longer fails on Windows/Python 3.13 with `ZoneInfoNotFoundError: 'No time zone found with key local'` (APScheduler was given `timezone="local"`).
+
 ### Changed
 
 - CI publishes a **beta GitHub pre-release** (Windows zip) on merge to `testing` (tag `0.1.0-beta`, retargeted on later testing merges), and a **stable** release on merge to `main` (tag `0.1.0`). GitVersion on `testing` still uses a `beta` label for InformationalVersion.
