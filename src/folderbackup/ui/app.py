@@ -14,6 +14,7 @@ from folderbackup.cloud.factory import create_backend
 from folderbackup.config.secrets import Secrets, credentials_present, load_secrets, save_secrets
 from folderbackup.config.settings import (
     AppSettings,
+    dest_visible_fields,
     load_settings,
     save_settings,
     validate_settings,
@@ -157,7 +158,8 @@ class FolderBackupApp(ctk.CTk):
     def _build_destination(self) -> None:
         tab = self.tabs.tab("Destination")
         ctk.CTkLabel(tab, text="Exactly one cloud destination is active.").pack(anchor="w", padx=8, pady=8)
-        self.provider = tk.StringVar(value="s3")
+        self.provider = ctk.StringVar(value="s3")
+        self.provider.trace_add("write", lambda *_: self._toggle_provider_fields())
         radios = ctk.CTkFrame(tab)
         radios.pack(fill="x", padx=8)
         for label, value in (("Amazon S3", "s3"), ("Google Cloud Storage", "gcs"), ("Azure Blob", "azure")):
@@ -168,25 +170,27 @@ class FolderBackupApp(ctk.CTk):
         grid = ctk.CTkFrame(tab)
         grid.pack(fill="x", padx=8, pady=8)
         self._dest_entries: dict[str, ctk.CTkEntry] = {}
+        self._dest_labels: dict[str, ctk.CTkLabel] = {}
 
-        def add(key: str, label: str, row: int, show: str = "") -> None:
-            ctk.CTkLabel(grid, text=label).grid(row=row, column=0, sticky="w", pady=4)
+        def add(key: str, label: str, show: str = "") -> None:
+            lbl = ctk.CTkLabel(grid, text=label)
             entry = ctk.CTkEntry(grid, show=show, width=420)
-            entry.grid(row=row, column=1, sticky="ew", padx=8, pady=4)
+            self._dest_labels[key] = lbl
             self._dest_entries[key] = entry
 
-        add("bucket", "Bucket / container", 0)
-        add("prefix", "Object prefix", 1)
-        add("region", "Region (S3)", 2)
-        add("endpoint", "S3 endpoint (optional compatible)", 3)
-        add("aws_profile", "AWS profile name (optional)", 4)
-        add("s3_key", "S3 access key ID", 5)
-        add("s3_secret", "S3 secret access key", 6, show="*")
-        add("gcs_path", "GCS service-account JSON path", 7)
-        add("azure_account", "Azure storage account name", 8)
-        add("azure_key", "Azure account key", 9, show="*")
-        add("azure_conn", "Azure connection string", 10, show="*")
+        add("bucket", "Bucket / container")
+        add("prefix", "Object prefix")
+        add("region", "Region")
+        add("endpoint", "S3 endpoint (optional compatible)")
+        add("aws_profile", "AWS profile name (optional)")
+        add("s3_key", "S3 access key ID")
+        add("s3_secret", "S3 secret access key", show="*")
+        add("gcs_path", "GCS service-account JSON path")
+        add("azure_account", "Azure storage account name")
+        add("azure_key", "Azure account key", show="*")
+        add("azure_conn", "Azure connection string (or use account + key)", show="*")
         grid.columnconfigure(1, weight=1)
+        self._toggle_provider_fields()
 
         ctk.CTkButton(tab, text="Test connection", command=self._test_connection).pack(anchor="w", padx=8, pady=8)
         self.test_result = ctk.CTkLabel(tab, text="", wraplength=780, justify="left")
@@ -242,18 +246,20 @@ class FolderBackupApp(ctk.CTk):
         ).pack(anchor="w", padx=8, pady=(0, 8))
 
     def _toggle_provider_fields(self) -> None:
-        prov = self.provider.get()
-        groups = {
-            "s3": {"region", "endpoint", "aws_profile", "s3_key", "s3_secret"},
-            "gcs": {"gcs_path"},
-            "azure": {"azure_account", "azure_key", "azure_conn"},
-        }
-        always = {"bucket", "prefix"}
+        if not getattr(self, "_dest_entries", None):
+            return
+        visible = dest_visible_fields(self.provider.get())
+        row = 0
         for key, entry in self._dest_entries.items():
-            if key in always or key in groups.get(prov, ()):
+            label = self._dest_labels[key]
+            if key in visible:
+                label.grid(row=row, column=0, sticky="w", pady=4)
+                entry.grid(row=row, column=1, sticky="ew", padx=8, pady=4)
                 entry.configure(state="normal")
+                row += 1
             else:
-                entry.configure(state="disabled")
+                label.grid_forget()
+                entry.grid_forget()
 
     def _folder_lines(self) -> list[str]:
         text = self.folder_list.get("1.0", "end").strip()
