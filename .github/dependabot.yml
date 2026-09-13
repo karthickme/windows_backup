@@ -1,0 +1,53 @@
+# Weekly Python and Actions updates. Assignees/reviewers omitted (no known GitHub usernames).
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    target-branch: testing
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    rebase-strategy: auto
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: scope
+    labels:
+      - dependencies
+      - python
+    groups:
+      azure:
+        patterns:
+          - "azure*"
+      google-cloud:
+        patterns:
+          - "google-cloud*"
+          - "google-auth*"
+          - "google-api*"
+          - "google-resumable-media"
+          - "google-crc32c"
+      aws-sdk:
+        patterns:
+          - "boto3"
+          - "botocore"
+          - "s3transfer"
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: testing
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    rebase-strategy: auto
+    commit-message:
+      prefix: "chore(ci)"
+      include: scope
+    labels:
+      - dependencies
+      - github-actions
+    groups:
+      github-actions:
+        patterns:
+          - "*"

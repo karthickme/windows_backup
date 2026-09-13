@@ -1,0 +1,85 @@
+# GitVersion 6 (GitTools). SemVer comes from git history and tags such as v1.2.3.
+# main = production (no pre-release label). testing = QA (beta pre-release).
+workflow: GitHubFlow/v1
+mode: ContinuousDeployment
+strategies:
+  - ConfiguredNextVersion
+  - Mainline
+tag-prefix: '[vV]'
+major-version-bump-message: '\+semver:\s?(breaking|major)'
+minor-version-bump-message: '\+semver:\s?(feature|minor)'
+patch-version-bump-message: '\+semver:\s?(fix|patch)'
+no-bump-message: '\+semver:\s?(none|skip)'
+commit-message-incrementing: Enabled
+assembly-versioning-scheme: MajorMinorPatch
+assembly-file-versioning-scheme: MajorMinorPatch
+branches:
+  main:
+    regex: ^master$|^main$
+    label: ''
+    increment: Patch
+    is-main-branch: true
+    is-release-branch: false
+  testing:
+    regex: ^testing$
+    mode: ContinuousDeployment
+    label: beta
+    increment: Minor
+    source-branches:
+      - main
+    tracks-release-branches: true
+    is-main-branch: false
+    is-release-branch: false
+    prevent-increment:
+      when-current-commit-tagged: false
+    pre-release-weight: 10000
+  feature:
+    source-branches:
+      - testing
+      - main
+      - release
+  fix:
+    mode: ManualDeployment
+    label: '{BranchName}'
+    increment: Inherit
+    prevent-increment:
+      when-current-commit-tagged: false
+    regex: '^fix[\\/-](?<BranchName>.+)'
+    source-branches:
+      - testing
+      - main
+    is-main-branch: false
+    pre-release-weight: 30000
+  deps:
+    mode: ManualDeployment
+    label: '{BranchName}'
+    increment: Inherit
+    prevent-increment:
+      when-current-commit-tagged: false
+    regex: '^deps?[\\/-](?<BranchName>.+)'
+    source-branches:
+      - testing
+      - main
+    is-main-branch: false
+    pre-release-weight: 30000
+  hotfix:
+    mode: ManualDeployment
+    label: beta
+    increment: Patch
+    prevent-increment:
+      when-current-commit-tagged: false
+    regex: '^hotfix(es)?[\\/-](?<BranchName>.+)'
+    source-branches:
+      - main
+    is-release-branch: true
+    is-main-branch: false
+    pre-release-weight: 30000
+  pull-request:
+    source-branches:
+      - testing
+      - main
+      - release
+      - feature
+      - fix
+      - hotfix
+      - deps

@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "folderbackup"
+version = "0.1.0"
+description = "Windows desktop app for incremental folder backup to S3, GCS, or Azure Blob"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "FolderBackup" }]
+dependencies = [
+    "customtkinter>=5.2",
+    "boto3>=1.34",
+    "google-cloud-storage>=2.14",
+    "azure-storage-blob>=12.19",
+    "keyring>=24",
+    "apscheduler>=3.10",
+    "pyyaml>=6",
+    "platformdirs>=4",
+    "pystray>=0.19",
+    "pillow>=10",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+packaging = ["pyinstaller>=6"]
+
+[project.scripts]
+folderbackup = "folderbackup.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"

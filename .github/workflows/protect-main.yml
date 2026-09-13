@@ -1,0 +1,33 @@
+# Fails pull requests into production (`main`) unless the head branch is
+# `testing` (development / QA) or `hotfix/*`. GitHub rulesets cannot always
+# restrict merge sources to a single branch; this check fills that gap.
+name: Protect main
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  protect-main:
+    name: protect-main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require head branch testing or hotfix/*
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          echo "PR base=${GITHUB_BASE_REF} head=${HEAD_REF}"
+          case "${HEAD_REF}" in
+            testing|hotfix/*)
+              echo "OK: merging ${HEAD_REF} into main"
+              ;;
+            *)
+              echo "PRs into main must come from testing (development/QA) or hotfix/*."
+              echo "Open routine work against testing, soak there, then promote testing → main."
+              exit 1
+              ;;
+          esac
