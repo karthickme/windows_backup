@@ -16,9 +16,9 @@ Replace `OWNER/REPO` in the CI badge after the project is published on GitHub. T
 
 | Path | GitHub Release |
 | --- | --- |
-| `feature/*` (etc.) → **`testing`** | **Beta** pre-release (`prerelease`, not latest). Tag like `v1.2.3-beta.N`. Zip: `FolderBackup-{semver}-windows-x64.zip`. |
-| **`testing` → `main`** (or `hotfix/*` → `main`) | **Stable** release (not a pre-release, marked latest). Tag `vMajor.Minor.Patch`. |
-| Manual `v*` tag | Pre-release identifier in the tag (a hyphen, for example `-beta`) → beta; otherwise stable. |
+| `feature/*` (etc.) → **`testing`** | **Beta** pre-release (`prerelease`, not latest). Tag `0.1.0-beta` (GitVersion **MajorMinorPatch** + `-beta`). Zip: `FolderBackup-0.1.0-beta-windows-x64.zip`. Re-merging to `testing` retargets that tag and replaces the zip; if GitHub tag rules block the move, CI falls back to `0.1.0-beta.N`. |
+| **`testing` → `main`** (or `hotfix/*` → `main`) | **Stable** release (not a pre-release, marked latest). Tag `0.1.0` (same **MajorMinorPatch**, no `-beta`). Zip: `FolderBackup-0.1.0-windows-x64.zip`. |
+| Manual tag | Hyphen in the tag (for example `0.1.0-beta`) → beta; otherwise stable. Optional `v` prefix is still accepted. |
 
 Production users should only download Releases that GitHub does **not** mark as pre-release. CI creates the release on push to `testing` or `main`; you do not need a separate published-release workflow.
 
@@ -198,8 +198,8 @@ python -m PyInstaller --noconfirm --clean FolderBackup.spec
 Workflow: [`.github/workflows/ci.yml`](.github/workflows/ci.yml). Jobs are split so **pytest** can be a required status check without blocking QA merges on PyInstaller.
 
 1. Job **`test`**: pytest on `windows-latest` for pull requests to `testing` and `main`, and for pushes to `testing` (merge-to-testing gate) and `main`. Required check name remains **`test`**.
-2. Job **`pack`**: full history, GitVersion 6 (`GitVersion.yml`: `main` is mainline with no pre-release label; `testing` uses a `beta` pre-release label), Python 3.12, `.[dev,packaging]`, Windows zip artifacts. Runs on push to `testing` or `main`/`master`, on `v*` tags, and on optional `workflow_dispatch` — not on PRs into `testing`.
-3. Creates a GitHub Release and attaches `FolderBackup-{semver}-windows-x64.zip`. Push to **`testing`** is a pre-release (`make_latest: false`). Push to **`main`** is stable (`make_latest: true`) when GitVersion has no pre-release suffix. Manual `v*` tags with a hyphen are beta; otherwise stable. Tags created with `GITHUB_TOKEN` do not re-run the workflow, so the zip is not published twice.
+2. Job **`pack`**: full history, GitVersion 6 (`GitVersion.yml`: `main` is mainline with no pre-release label; `testing` uses a `beta` pre-release label), Python 3.12, `.[dev,packaging]`, Windows zip artifacts. Runs on push to `testing` or `main`/`master`, on version tags, and on optional `workflow_dispatch` — not on PRs into `testing`.
+3. Creates a GitHub Release and attaches `FolderBackup-{public-version}-windows-x64.zip`. Push to **`testing`** tags **`0.1.0-beta`** (title `Beta 0.1.0`, `make_latest: false`) and retargets that tag on later testing merges. Push to **`main`** tags **`0.1.0`** (title `0.1.0`, `make_latest: true`). InformationalVersion may still include `-beta.N`; the GitHub tag does not. Manual tags with a hyphen are beta; otherwise stable. Tags created with `GITHUB_TOKEN` do not re-run the workflow, so the zip is not published twice.
 
 PRs into `main` must come from `testing` or `hotfix/*` ([`.github/workflows/protect-main.yml`](.github/workflows/protect-main.yml)). Rulesets: [.github/SETUP.md](.github/SETUP.md).
 
