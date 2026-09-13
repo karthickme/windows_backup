@@ -85,12 +85,27 @@ class FolderBackupApp(ctk.CTk):
         self.cancel_btn = ctk.CTkButton(btns, text="Cancel", command=self._cancel, state="disabled")
         self.cancel_btn.pack(side="left", padx=4)
 
-        self.tabs = ctk.CTkTabview(self)
+        tab_font = ctk.CTkFont(size=17, weight="bold")
+        self.tabs = ctk.CTkTabview(
+            self,
+            segmented_button_font=tab_font,
+            segmented_button_selected_color=("#1f6aa5", "#1f6aa5"),
+            segmented_button_selected_hover_color=("#144870", "#144870"),
+            segmented_button_unselected_color=("#d5dbe3", "#3d3d3d"),
+            segmented_button_unselected_hover_color=("#c4ccd6", "#4a4a4a"),
+            text_color=("#111111", "#f5f5f5"),
+            anchor="center",
+        )
         self.tabs.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+        # CTkTabview keeps tab buttons at 26px; enlarge the bar so labels read as primary nav.
+        self.tabs._button_height = 44
+        self.tabs._segmented_button.configure(height=44, font=tab_font)
+        self.tabs._configure_grid()
         self.tabs.add("Sources")
         self.tabs.add("Destination")
         self.tabs.add("Schedule")
         self.tabs.add("Activity")
+        self.tabs._segmented_button.grid(sticky="nsew")
         self._build_sources()
         self._build_destination()
         self._build_schedule()
