@@ -8,7 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
-- CI publishes a **beta GitHub pre-release** (Windows zip) on merge to `testing`, and a **stable** release on merge to `main`. GitVersion on `testing` uses a `-beta` pre-release label.
+- CI publishes a **beta GitHub pre-release** (Windows zip) on merge to `testing` (tag `0.1.0-beta`, retargeted on later testing merges), and a **stable** release on merge to `main` (tag `0.1.0`). GitVersion on `testing` still uses a `beta` label for InformationalVersion.
 
 ## [0.1.0] - 2026-09-13
 

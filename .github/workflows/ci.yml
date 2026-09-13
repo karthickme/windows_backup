@@ -4,7 +4,7 @@ name: CI
 on:
   push:
     branches: [main, master, testing]
-    tags: ["v*"]
+    tags: ["v*", "*.*.*"]
   pull_request:
     branches: [testing, main]
   workflow_dispatch:
@@ -38,7 +38,7 @@ jobs:
     needs: test
     if: >
       github.event_name == 'workflow_dispatch' ||
-      startsWith(github.ref, 'refs/tags/v') ||
+      startsWith(github.ref, 'refs/tags/') ||
       (github.event_name == 'push' && (
         github.ref == 'refs/heads/main' ||
         github.ref == 'refs/heads/master' ||
@@ -62,6 +62,38 @@ jobs:
         id: gitversion
         uses: gittools/actions/gitversion/execute@v4.7.0
 
+      - name: Release metadata
+        id: channel
+        shell: pwsh
+        run: |
+          $majorMinorPatch = "${{ steps.gitversion.outputs.majorMinorPatch }}"
+          $semVer = "${{ steps.gitversion.outputs.semVer }}"
+          $preReleaseNumber = "${{ steps.gitversion.outputs.preReleaseNumber }}"
+          $ref = "${{ github.ref }}"
+          $refName = "${{ github.ref_name }}"
+          $isTag = $ref.StartsWith("refs/tags/")
+          $isTesting = ($ref -eq "refs/heads/testing")
+          $isPrerelease = $isTesting -or
+            ($semVer -like "*-*") -or
+            ($isTag -and $refName.Contains("-"))
+          if ($isTag) {
+            $tagName = $refName
+          } elseif ($isPrerelease) {
+            $tagName = "$majorMinorPatch-beta"
+          } else {
+            $tagName = $majorMinorPatch
+          }
+          $publicVersion = if ($isTag) { ($refName -replace '^v', '') } else { $tagName }
+          $title = if ($isPrerelease) { "Beta $majorMinorPatch" } else { $majorMinorPatch }
+          $makeLatest = if ($isPrerelease) { "false" } else { "true" }
+          "is_prerelease=$($isPrerelease.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "make_latest=$makeLatest" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "tag_name=$tagName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "public_version=$publicVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "title=$title" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "pre_release_number=$preReleaseNumber" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "major_minor_patch=$majorMinorPatch" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -76,7 +108,7 @@ jobs:
         shell: pwsh
         run: |
           ./scripts/build-windows.ps1 `
-            -Version "${{ steps.gitversion.outputs.semVer }}" `
+            -Version "${{ steps.channel.outputs.public_version }}" `
             -AssemblyVersion "${{ steps.gitversion.outputs.assemblySemVer }}" `
             -InformationalVersion "${{ steps.gitversion.outputs.informationalVersion }}"
 
@@ -89,36 +121,70 @@ jobs:
       - name: Upload zip
         uses: actions/upload-artifact@v4
         with:
-          name: FolderBackup-${{ steps.gitversion.outputs.semVer }}-windows-x64.zip
-          path: dist/FolderBackup-${{ steps.gitversion.outputs.semVer }}-windows-x64.zip
+          name: FolderBackup-${{ steps.channel.outputs.public_version }}-windows-x64.zip
+          path: dist/FolderBackup-${{ steps.channel.outputs.public_version }}-windows-x64.zip
 
-      - name: Release metadata
-        id: channel
+      - name: Retarget beta tag
+        id: retarget
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: pwsh
         run: |
-          $semVer = "${{ steps.gitversion.outputs.semVer }}"
-          $ref = "${{ github.ref }}"
-          $refName = "${{ github.ref_name }}"
-          $isTag = $ref.StartsWith("refs/tags/")
-          $isPrerelease = ($ref -eq "refs/heads/testing") -or
-            ($semVer -like "*-*") -or
-            ($isTag -and $refName.Contains("-"))
-          $tagName = if ($isTag) { $refName } else { "v$semVer" }
-          $title = if ($isPrerelease) { "Beta $semVer" } else { $semVer }
-          $makeLatest = if ($isPrerelease) { "false" } else { "true" }
-          "is_prerelease=$($isPrerelease.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "make_latest=$makeLatest" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          $PSNativeCommandUseErrorActionPreference = $false
+          $tagName = "${{ steps.channel.outputs.tag_name }}"
+          $publicVersion = "${{ steps.channel.outputs.public_version }}"
+          $isPrerelease = "${{ steps.channel.outputs.is_prerelease }}" -eq "true"
+          $isTag = "${{ github.ref }}".StartsWith("refs/tags/")
+          $sha = "${{ github.sha }}"
+          $repo = "${{ github.repository }}"
+          $majorMinorPatch = "${{ steps.channel.outputs.major_minor_patch }}"
+          $preReleaseNumber = "${{ steps.channel.outputs.pre_release_number }}"
+          $usedFallback = "false"
+          if (-not $isTag -and $isPrerelease) {
+            gh api "repos/$repo/git/ref/tags/$tagName" --silent 2>$null | Out-Null
+            if ($LASTEXITCODE -eq 0) {
+              $moved = $false
+              $patchBody = @{ sha = $sha; force = $true } | ConvertTo-Json -Compress
+              $patchBody | gh api --method PATCH "repos/$repo/git/refs/tags/$tagName" --input - 2>$null | Out-Null
+              if ($LASTEXITCODE -eq 0) {
+                $moved = $true
+                Write-Host "Moved tag $tagName to $sha"
+              } else {
+                gh api --method DELETE "repos/$repo/git/refs/tags/$tagName" --silent 2>$null | Out-Null
+                if ($LASTEXITCODE -eq 0) {
+                  $moved = $true
+                  Write-Host "Deleted tag $tagName so the release step can recreate it on $sha"
+                }
+              }
+              if (-not $moved) {
+                $suffix = $preReleaseNumber
+                if ([string]::IsNullOrWhiteSpace($suffix)) { $suffix = "1" }
+                $fallback = "$majorMinorPatch-beta.$suffix"
+                Write-Warning "GitHub did not allow updating $tagName (tag protection). Falling back to $fallback."
+                $oldZip = "dist/FolderBackup-$publicVersion-windows-x64.zip"
+                $newZip = "dist/FolderBackup-$fallback-windows-x64.zip"
+                if ((Test-Path $oldZip) -and ($fallback -ne $publicVersion)) {
+                  Move-Item -Path $oldZip -Destination $newZip -Force
+                }
+                $tagName = $fallback
+                $publicVersion = $fallback
+                $usedFallback = "true"
+              }
+            }
+          }
           "tag_name=$tagName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "title=$title" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "public_version=$publicVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "used_fallback=$usedFallback" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.channel.outputs.tag_name }}
+          tag_name: ${{ steps.retarget.outputs.tag_name }}
           name: ${{ steps.channel.outputs.title }}
           target_commitish: ${{ github.sha }}
           prerelease: ${{ steps.channel.outputs.is_prerelease == 'true' }}
           make_latest: ${{ steps.channel.outputs.make_latest }}
-          files: dist/FolderBackup-${{ steps.gitversion.outputs.semVer }}-windows-x64.zip
+          files: dist/FolderBackup-${{ steps.retarget.outputs.public_version }}-windows-x64.zip
           fail_on_unmatched_files: true
           generate_release_notes: true
+          overwrite_files: true
