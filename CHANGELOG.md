@@ -9,12 +9,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Fixed
 
 - App startup no longer fails on Windows/Python 3.13 with `ZoneInfoNotFoundError: 'No time zone found with key local'` (APScheduler was given `timezone="local"`).
+- CI **Retarget beta tag** no longer fails when the reusable `0.x.y-beta` tag does not exist yet (first testing pack, or `gh` 404 left as the step exit code).
 
 ### Changed
 
 - Destination tab shows only the connection fields for the selected cloud (S3, GCS, or Azure).
 - Merged pull-request head branches are deleted automatically (`feature/*`, `fix/*`, `deps/*`, `hotfix/*`). `main` and `testing` are not deleted.
-
 - CI publishes a **beta GitHub pre-release** (Windows zip) on merge to `testing` (tag `0.1.0-beta`, retargeted on later testing merges), and a **stable** release on merge to `main` (tag `0.1.0`). GitVersion on `testing` still uses a `beta` label for InformationalVersion.
 
 ## [0.1.0] - 2026-09-13

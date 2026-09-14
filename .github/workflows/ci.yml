@@ -130,6 +130,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Continue'
           $PSNativeCommandUseErrorActionPreference = $false
           $tagName = "${{ steps.channel.outputs.tag_name }}"
           $publicVersion = "${{ steps.channel.outputs.public_version }}"
@@ -141,16 +142,20 @@ jobs:
           $preReleaseNumber = "${{ steps.channel.outputs.pre_release_number }}"
           $usedFallback = "false"
           if (-not $isTag -and $isPrerelease) {
-            gh api "repos/$repo/git/ref/tags/$tagName" --silent 2>$null | Out-Null
-            if ($LASTEXITCODE -eq 0) {
+            gh api "repos/$repo/git/ref/tags/$tagName" --silent
+            $tagExists = ($LASTEXITCODE -eq 0)
+            if (-not $tagExists) {
+              Write-Host "Tag $tagName does not exist yet; the release step will create it."
+            } else {
               $moved = $false
               $patchBody = @{ sha = $sha; force = $true } | ConvertTo-Json -Compress
-              $patchBody | gh api --method PATCH "repos/$repo/git/refs/tags/$tagName" --input - 2>$null | Out-Null
+              $patchBody | gh api --method PATCH "repos/$repo/git/refs/tags/$tagName" --input -
               if ($LASTEXITCODE -eq 0) {
                 $moved = $true
                 Write-Host "Moved tag $tagName to $sha"
               } else {
-                gh api --method DELETE "repos/$repo/git/refs/tags/$tagName" --silent 2>$null | Out-Null
+                Write-Host "Could not move tag $tagName; trying delete so the release step can recreate it."
+                gh api --method DELETE "repos/$repo/git/refs/tags/$tagName" --silent
                 if ($LASTEXITCODE -eq 0) {
                   $moved = $true
                   Write-Host "Deleted tag $tagName so the release step can recreate it on $sha"
@@ -175,6 +180,8 @@ jobs:
           "tag_name=$tagName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           "public_version=$publicVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           "used_fallback=$usedFallback" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          # gh 404 (tag not found) leaves LASTEXITCODE=1; GitHub Actions treats that as step failure.
+          exit 0
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
