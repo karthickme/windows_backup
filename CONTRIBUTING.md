@@ -60,7 +60,7 @@ GitHub still defaults the PR **base** to `main` (repository default branch). Swi
 
 1. Branch from **`main`** (`hotfix/…`).
 2. Open a PR into **`main`**. `protect-main` allows `hotfix/*`. **`test`** must pass.
-3. Also merge the same change into **`testing`** (second PR, or merge `main` back into `testing`) so QA does not regress.
+3. Also land the same change on **`testing`** so QA does not regress. Prefer a PR **`main` → `testing`** (the hotfix branch is deleted on merge). Uncheck **Delete branch** if you still need `hotfix/*` as a second PR into `testing`.
 
 ### Pull request flow
 
@@ -70,6 +70,8 @@ GitHub still defaults the PR **base** to `main` (repository default branch). Swi
 4. Optional: manual tags still publish; a hyphen (for example `0.1.0-beta`) is beta, otherwise stable (for example `0.1.0`)
 
 Never commit directly to `main`. Avoid committing directly to `testing` as well; use a PR.
+
+After a PR is merged, GitHub **deletes the head branch** (`feature/*`, `fix/*`, `deps/*`, `hotfix/*`). **`main` and `testing` are not deleted** (deletion is blocked on those branches). Uncheck **Delete branch** on the merge dialog if you need to keep a short-lived branch.
 
 Production users should only download GitHub Releases that are **not** marked as pre-release.
 
