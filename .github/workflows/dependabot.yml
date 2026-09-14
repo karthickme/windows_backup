@@ -47,7 +47,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
         run: |
-          if ! gh pr merge --auto --squash "$PR_URL"; then
+          if ! gh pr merge --auto --squash --delete-branch "$PR_URL"; then
             echo "Auto-merge skipped (repo setting or token). PR left open."
           fi
 

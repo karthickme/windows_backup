@@ -90,6 +90,16 @@ If `gh api` POST fails, create this in the UI without changing Protect main / Pr
 
 This only blocks creating branches whose names are not in that list. Existing Protect main / Protect testing rulesets stay as they are.
 
+## Automatically delete head branches
+
+Enable **Settings → General → Pull Requests → Automatically delete head branches** (`delete_branch_on_merge`). Feature, fix, Dependabot, and hotfix branches are removed after merge. **`main` and `testing` stay**: those rulesets restrict deletions, and GitHub does not delete the default branch.
+
+```powershell
+gh api repos/karthickme/windows_backup --method PATCH -f delete_branch_on_merge=true
+```
+
+Dependabot auto-merge also passes `--delete-branch`. Do not enable this if you still need a merged `hotfix/*` branch as the source of a follow-up PR into `testing` — merge into `testing` first, or leave the GitHub merge checkbox **Delete branch** unchecked for that PR.
+
 ## Default pull request base
 
 The repository default branch stays **`main`**, so the GitHub “New pull request” screen still defaults the **base** to `main`. Switch the base to **`testing`** for features, fixes, and Dependabot. The pull request template reminds you. PRs whose base is `main` and whose head is not `testing` or `hotfix/*` fail `protect-main`.
