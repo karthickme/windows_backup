@@ -1,5 +1,7 @@
-# GitVersion 6 (GitTools). SemVer comes from git history and tags such as v1.2.3.
+# GitVersion 6 (GitTools). SemVer comes from git history and tags such as 1.2.3 (optional v prefix).
 # main = production (no pre-release label). testing = QA (beta pre-release).
+# Public GitHub tags are built in CI from MajorMinorPatch: 0.1.0 on main, 0.1.0-beta on testing.
+# Keep label: beta so InformationalVersion can still include a pre-release (for example 0.1.0-beta.1).
 workflow: GitHubFlow/v1
 mode: ContinuousDeployment
 strategies:

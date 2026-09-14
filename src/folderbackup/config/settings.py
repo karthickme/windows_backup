@@ -13,6 +13,18 @@ from folderbackup.paths import config_path, ensure_app_dirs
 PROVIDERS = ("s3", "gcs", "azure")
 INTERVALS = ("hourly", "daily", "weekly")
 
+DEST_ALWAYS_FIELDS = ("bucket", "prefix")
+DEST_PROVIDER_FIELDS: dict[str, tuple[str, ...]] = {
+    "s3": ("region", "endpoint", "aws_profile", "s3_key", "s3_secret"),
+    "gcs": ("gcs_path",),
+    "azure": ("azure_account", "azure_key", "azure_conn"),
+}
+
+
+def dest_visible_fields(provider: str) -> set[str]:
+    extra = DEST_PROVIDER_FIELDS.get(provider.lower().strip(), ())
+    return set(DEST_ALWAYS_FIELDS) | set(extra)
+
 
 @dataclass
 class FilterSettings:

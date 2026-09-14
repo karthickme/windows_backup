@@ -17,7 +17,7 @@ Branch protection is documented in [.github/SETUP.md](.github/SETUP.md) and enco
 ### `main` (production)
 
 - Production-ready code only.
-- A **stable** GitHub Release (Windows zip, `prerelease: false`, marked latest) is created on push/merge to `main`. The tag is `vMajor.Minor.Patch` from GitVersion (no pre-release suffix).
+- A **stable** GitHub Release (Windows zip, `prerelease: false`, marked latest) is created on push/merge to `main`. The tag is GitVersion **MajorMinorPatch** with no suffix, for example `0.1.0`.
 - Direct pushes, force pushes, and deletions are blocked. Merge **only** via pull request.
 - Head branch must be **`testing`** or **`hotfix/*`** (`protect-main` check). Classic GitHub protection cannot always restrict “only from testing”; the workflow plus a ruleset cover that.
 - Required status checks: **`test`** (pytest on `windows-latest`) and **`protect-main`**. PyInstaller (`pack`) runs after merge (push to `main`); it is not a merge gate.
@@ -26,7 +26,7 @@ Branch protection is documented in [.github/SETUP.md](.github/SETUP.md) and enco
 
 - Integration and soak branch. Merge feature, fix, and Dependabot PRs here first.
 - Require a pull request; required status check **`test`** (pytest). That is the merge-to-testing gate. Push to `testing` also runs pytest.
-- After merge, CI packs the Windows exe and creates/updates a **beta GitHub pre-release** (`prerelease: true`, not latest). Tag is GitVersion with a `-beta.N` suffix (for example `v1.2.3-beta.1`).
+- After merge, CI packs the Windows exe and creates/updates a **beta GitHub pre-release** (`prerelease: true`, not latest). Tag is **MajorMinorPatch** + `-beta` (for example `0.1.0-beta`), not `0.1.0-beta.1`. A later merge to `testing` moves that tag and replaces the zip; if GitHub forbids moving the tag, CI falls back to `0.1.0-beta.N`.
 - When `testing` is stable, open a PR **testing → main** to promote to a stable release.
 
 ### Branch names
@@ -60,16 +60,18 @@ GitHub still defaults the PR **base** to `main` (repository default branch). Swi
 
 1. Branch from **`main`** (`hotfix/…`).
 2. Open a PR into **`main`**. `protect-main` allows `hotfix/*`. **`test`** must pass.
-3. Also merge the same change into **`testing`** (second PR, or merge `main` back into `testing`) so QA does not regress.
+3. Also land the same change on **`testing`** so QA does not regress. Prefer a PR **`main` → `testing`** (the hotfix branch is deleted on merge). Uncheck **Delete branch** if you still need `hotfix/*` as a second PR into `testing`.
 
 ### Pull request flow
 
 1. `feature/*` / `fix/*` / `deps/*` → `testing` (pytest required) → **beta / pre-release**
 2. Soak / QA on `testing` (download the pre-release exe, not the latest stable)
 3. `testing` → `main` when stable (pytest + `protect-main` required) → **stable release**
-4. Optional: manual `v*` tags still publish; a tag with a pre-release identifier (hyphen, for example `v1.2.3-beta.1`) is beta, otherwise stable
+4. Optional: manual tags still publish; a hyphen (for example `0.1.0-beta`) is beta, otherwise stable (for example `0.1.0`)
 
 Never commit directly to `main`. Avoid committing directly to `testing` as well; use a PR.
+
+After a PR is merged, GitHub **deletes the head branch** (`feature/*`, `fix/*`, `deps/*`, `hotfix/*`). **`main` and `testing` are not deleted** (deletion is blocked on those branches). Uncheck **Delete branch** on the merge dialog if you need to keep a short-lived branch.
 
 Production users should only download GitHub Releases that are **not** marked as pre-release.
 
@@ -80,5 +82,5 @@ Production users should only download GitHub Releases that are **not** marked as
 ### CI
 
 - Job **`test`**: pytest on `windows-latest` for pull requests to `testing` and `main`, and for pushes to `testing` and `main` (required check name remains **`test`**).
-- Job **`pack`**: GitVersion + PyInstaller + zip; runs on push to `testing` (beta pre-release), push to `main`/`master` (stable release), manual `v*` tags, and optional `workflow_dispatch`. Not required to merge into `testing`. Uses `contents: write` to create the GitHub Release. There is no `release: published` trigger, so assets are not attached twice.
+- Job **`pack`**: GitVersion + PyInstaller + zip; runs on push to `testing` (beta tag `0.1.0-beta`), push to `main`/`master` (stable tag `0.1.0`), manual version tags, and optional `workflow_dispatch`. Not required to merge into `testing`. Uses `contents: write` to create the GitHub Release and retarget the reusable beta tag. There is no `release: published` trigger, so assets are not attached twice.
 - Workflow **`protect-main`**: PRs targeting `main` must come from `testing` or `hotfix/*`.

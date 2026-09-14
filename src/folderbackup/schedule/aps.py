@@ -20,7 +20,9 @@ JOB_ID = "folderbackup_incremental"
 class AppScheduler:
     def __init__(self, callback: Callable[[], None]):
         self._callback = callback
-        self._scheduler = BackgroundScheduler(timezone="local")
+        # APScheduler 3.10+ maps string timezones through zoneinfo. ZoneInfo("local")
+        # is not a valid IANA key; omit timezone so the scheduler uses tzlocal.
+        self._scheduler = BackgroundScheduler()
         self._started = False
 
     def start(self) -> None:
